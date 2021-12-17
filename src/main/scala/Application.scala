@@ -16,6 +16,7 @@ object Application extends App{
 object Program {
   import scala.io.StdIn.readLine
   type WordMap = Map[String, Int]
+  val specialCharsRegex: String = "[^A-Za-z0-9]"
 
   case class Index(indexedFiles: Vector[IndexedFile])
   case class IndexedFile(name: String, words: WordMap)
@@ -45,7 +46,9 @@ object Program {
   def indexDir(dir: File): Index = {
     val indexedFiles =  dir.listFiles.toVector
       //support nested dirs
-      .flatMap(file => if (file.isFile) Vector(file) else file.listFiles.toVector)
+      .flatMap(file =>
+        if (file.isDirectory) file.listFiles.toVector
+        else Vector(file))
       .filter(_.getName.endsWith(".txt"))
       .map(indexFile).collect{
       case Right(value) => value
@@ -72,7 +75,7 @@ object Program {
 
   //we are omitting all the special signs
   def normalizeLine(value: String) =
-    value.replaceAll("[^A-Za-z0-9]", " ")
+    value.replaceAll(specialCharsRegex, " ")
 
   //assumption: two words match regardless of the casing, so we normalize all to lowercase
   def normalizeWord(value: String) = value.trim.toLowerCase
@@ -106,7 +109,7 @@ object Program {
         case None => aggregate
       }
     }
-    iterateIndexedFiles(index.indexedFiles, "")
+    iterateIndexedFiles(index.indexedFiles, "").trim
   }
 
   def score(indexedFileWordMap: WordMap, searchWordMap: WordMap): Float = {
