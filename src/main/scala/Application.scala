@@ -68,7 +68,8 @@ object Program {
     }.toEither
 
     words match {
-      case Left(value) => Left(ErrorReadingFile(name, value))
+      case Left(value) =>
+        println(s"Couldn't read file $name due to ${value.getMessage}"); Left(ErrorReadingFile(name, value))
       case Right(value) => Right(IndexedFile(name, value))
     }
   }
@@ -93,12 +94,14 @@ object Program {
     }
     print(s"search> ")
     val searchString = readLine()
-    println(scoringResult(searchString, index))
+    if(searchString.isBlank) println("Next time give me something to search for...")
+    else if(searchString == ":q") return
+    else println(scoringResult(searchString, index))
     iterate(index)
   }
 
   def scoringResult(searchString: String, index: Index): String = {
-    val searchArray = tokenize(searchString)
+    val searchArray = tokenize(normalizeLine(searchString))
     val searchWordMap = searchArray.map(normalizeWord).groupBy(identity).view.mapValues(_.size).toMap
     @tailrec
     def iterateIndexedFiles(indexFiles: Vector[IndexedFile], aggregate: String): String = {
