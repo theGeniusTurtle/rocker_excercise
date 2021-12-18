@@ -56,37 +56,6 @@ object Program {
     Index(indexedFiles)
   }
 
-  def indexFile(file: File): Either[ReadFileError, IndexedFile] = {
-    val name: String = file.getName
-    val words: Either[Throwable, WordMap] = Using(Source.fromFile(file)) {
-      source => source.getLines().toVector
-        .map(normalizeLine)
-        .flatMap(tokenize)
-        .map(normalizeWord)
-        .groupBy(identity)
-        .view.mapValues(_.size).toMap
-    }.toEither
-
-    words match {
-      case Left(value) =>
-        println(s"Couldn't read file $name due to ${value.getMessage}"); Left(ErrorReadingFile(name, value))
-      case Right(value) => Right(IndexedFile(name, value))
-    }
-  }
-
-  //we are omitting all the special signs
-  def normalizeLine(value: String) =
-    value.replaceAll(specialCharsRegex, " ")
-
-  //assumption: two words match regardless of the casing, so we normalize all to lowercase
-  def normalizeWord(value: String) = value.trim.toLowerCase
-
-
-  def tokenize(value: String): Vector[String] =
-    value.split(" ").toVector
-      .filter(!_.isBlank)
-
-
   def iterate(index: Index): Unit = {
     if(index.indexedFiles.isEmpty){
       println("Directory is empty. Please re-run and specify non-empty one.")
@@ -115,7 +84,36 @@ object Program {
     iterateIndexedFiles(index.indexedFiles, "").trim
   }
 
-  def score(indexedFileWordMap: WordMap, searchWordMap: WordMap): Float = {
+  private def indexFile(file: File): Either[ReadFileError, IndexedFile] = {
+    val name: String = file.getName
+    val words: Either[Throwable, WordMap] = Using(Source.fromFile(file)) {
+      source => source.getLines().toVector
+        .map(normalizeLine)
+        .flatMap(tokenize)
+        .map(normalizeWord)
+        .groupBy(identity)
+        .view.mapValues(_.size).toMap
+    }.toEither
+
+    words match {
+      case Left(value) =>
+        println(s"Couldn't read file $name due to ${value.getMessage}"); Left(ErrorReadingFile(name, value))
+      case Right(value) => Right(IndexedFile(name, value))
+    }
+  }
+
+  //we are omitting all the special signs
+  private def normalizeLine(value: String) =
+    value.replaceAll(specialCharsRegex, " ")
+
+  //assumption: two words match regardless of the casing, so we normalize all to lowercase
+  private def normalizeWord(value: String) = value.trim.toLowerCase
+
+  private def tokenize(value: String): Vector[String] =
+    value.split(" ").toVector
+      .filter(!_.isBlank)
+
+  private def score(indexedFileWordMap: WordMap, searchWordMap: WordMap): Float = {
     searchWordMap.toVector.map {
       case (word, occurrences) =>
         val occurrencesInFile: Int = indexedFileWordMap.applyOrElse[String, Int](word, _ => 0)
